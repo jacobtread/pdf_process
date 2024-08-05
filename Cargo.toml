@@ -3,9 +3,18 @@ name = "pdf_process"
 version = "0.0.0"
 edition = "2021"
 description = "Library for rendering and extracting metadata/text from PDF files using poppler"
+readme = "README.md"
+license = "MIT"
 
 homepage = "https://github.com/jacobtread/pdf_process"
 repository = "https://github.com/jacobtread/pdf_process"
+keywords = ["pdf", "image", "conversion"]
+categories = [
+    "multimedia",
+    "multimedia::images",
+    "multimedia::encoding",
+    "visualization",
+]
 
 [dependencies]
 # Async runtime & utils
