@@ -1,0 +1,25 @@
+[package]
+name = "pdf_process"
+version = "0.0.0"
+edition = "2021"
+description = "Library for rendering and extracting metadata/text from PDF files using poppler"
+
+homepage = "https://github.com/jacobtread/pdf_process"
+repository = "https://github.com/jacobtread/pdf_process"
+
+[dependencies]
+# Async runtime & utils
+tokio = { version = "1", features = ["io-util", "process"] }
+futures = "0.3"
+
+# Image 
+image = { version = "0.25.1", default-features = false, features = [
+    "rayon",
+    "jpeg",
+] }
+
+# Error handling
+thiserror = "1"
+
+[dev-dependencies]
+tokio = { version = "1", features = ["full"] }
