@@ -1,31 +1,106 @@
-use std::{num::ParseIntError, process::Stdio};
+use std::{collections::HashMap, num::ParseIntError, process::Stdio};
 
 use thiserror::Error;
 use tokio::{io::AsyncWriteExt, process::Command};
 
 #[derive(Debug)]
 pub struct PdfInfo {
-    pub title: Option<String>,
-    pub subject: Option<String>,
-    pub keywords: Option<String>,
-    pub author: Option<String>,
-    pub producer: Option<String>,
-    pub creation_date: Option<String>,
-    pub mod_date: Option<String>,
-    pub custom_metadata: Option<bool>,
-    pub metadata_stream: Option<bool>,
-    pub tagged: Option<bool>,
-    pub user_properties: Option<bool>,
-    pub suspects: Option<bool>,
-    pub form: Option<String>,
-    pub javascript: Option<bool>,
-    pub pages: Option<usize>,
-    pub encrypted: Option<bool>,
-    pub page_size: Option<String>,
-    pub page_rot: Option<String>,
-    pub file_size: Option<String>,
-    pub optimized: Option<bool>,
-    pub pdf_version: Option<String>,
+    /// Data parsed from the pdfinfo cli
+    data: HashMap<String, String>,
+}
+
+impl PdfInfo {
+    fn data(&self, key: &str) -> Option<&str> {
+        self.data.get(key).map(String::as_str)
+    }
+
+    pub fn pages(&self) -> Option<Result<usize, ParseIntError>> {
+        self.data("Pages").map(|value| value.parse::<usize>())
+    }
+
+    pub fn title(&self) -> Option<&str> {
+        self.data("Title")
+    }
+
+    pub fn subject(&self) -> Option<&str> {
+        self.data("Subject")
+    }
+
+    pub fn keywords(&self) -> Option<&str> {
+        self.data("Keywords")
+    }
+
+    pub fn creator(&self) -> Option<&str> {
+        self.data("Creator")
+    }
+
+    pub fn producer(&self) -> Option<&str> {
+        self.data("Producer")
+    }
+
+    pub fn creation_date(&self) -> Option<&str> {
+        self.data("CreationDate")
+    }
+
+    pub fn mod_date(&self) -> Option<&str> {
+        self.data("ModDate")
+    }
+
+    pub fn author(&self) -> Option<&str> {
+        self.data("Author")
+    }
+
+    pub fn custom_metadata(&self) -> Option<bool> {
+        self.data("Custom Metadata").map(parse_bool)
+    }
+
+    pub fn metadata_stream(&self) -> Option<bool> {
+        self.data("Metadata Stream").map(parse_bool)
+    }
+
+    pub fn tagged(&self) -> Option<bool> {
+        self.data("Tagged").map(parse_bool)
+    }
+
+    pub fn user_properties(&self) -> Option<bool> {
+        self.data("UserProperties").map(parse_bool)
+    }
+
+    pub fn suspects(&self) -> Option<bool> {
+        self.data("Suspects").map(parse_bool)
+    }
+
+    pub fn form(&self) -> Option<&str> {
+        self.data("Form")
+    }
+
+    pub fn page_size(&self) -> Option<&str> {
+        self.data("Page size")
+    }
+
+    pub fn javascript(&self) -> Option<bool> {
+        self.data("JavaScript").map(parse_bool)
+    }
+
+    pub fn encrypted(&self) -> Option<bool> {
+        self.data("Encrypted").map(parse_bool)
+    }
+
+    pub fn page_rot(&self) -> Option<&str> {
+        self.data("Page rot")
+    }
+
+    pub fn file_size(&self) -> Option<&str> {
+        self.data("File size")
+    }
+
+    pub fn optimized(&self) -> Option<bool> {
+        self.data("Optimized").map(parse_bool)
+    }
+
+    pub fn pdf_version(&self) -> Option<&str> {
+        self.data("PDF version")
+    }
 }
 
 #[derive(Debug, Error)]
@@ -93,94 +168,22 @@ fn parse_bool(value: &str) -> bool {
 
 /// Parses the fields from the pdfinfo response
 pub fn parse_pdf_info(output: &str) -> Result<PdfInfo, PdfInfoError> {
-    let mut title = None;
-    let mut subject = None;
-    let mut keywords = None;
-    let mut author = None;
-    let mut producer = None;
-    let mut creation_date = None;
-    let mut mod_date = None;
-    let mut custom_metadata = None;
-    let mut metadata_stream = None;
-    let mut tagged = None;
-    let mut user_properties = None;
-    let mut suspects = None;
-    let mut form = None;
-    let mut javascript = None;
-    let mut pages = None;
-    let mut encrypted = None;
-    let mut page_size = None;
-    let mut page_rot = None;
-    let mut file_size = None;
-    let mut optimized = None;
-    let mut pdf_version = None;
+    let data = output
+        .lines()
+        .filter_map(|line| {
+            let (key, value) = line.split_once(':')?;
+            let value = value.trim_start();
+            Some((key.to_string(), value.to_string()))
+        })
+        .collect();
 
-    for line in output.lines() {
-        let (key, value) = match line.split_once(':') {
-            Some(value) => value,
-            None => continue,
-        };
-        let value = value.trim_start();
-
-        match key {
-            "Title" => title = Some(value.to_string()),
-            "Subject" => subject = Some(value.to_string()),
-            "Keywords" => keywords = Some(value.to_string()),
-            "Author" => author = Some(value.to_string()),
-            "Producer" => producer = Some(value.to_string()),
-            "CreationDate" => creation_date = Some(value.to_string()),
-            "ModDate" => mod_date = Some(value.to_string()),
-            "Custom Metadata" => custom_metadata = Some(parse_bool(value)),
-            "Metadata Stream" => metadata_stream = Some(parse_bool(value)),
-            "Tagged" => tagged = Some(parse_bool(value)),
-            "UserProperties" => user_properties = Some(parse_bool(value)),
-            "Suspects" => suspects = Some(parse_bool(value)),
-            "Form" => form = Some(value.to_string()),
-            "JavaScript" => javascript = Some(parse_bool(value)),
-            "Pages" => {
-                pages = Some(
-                    value
-                        .parse::<usize>()
-                        .map_err(PdfInfoError::InvalidPageCount)?,
-                )
-            }
-            "Encrypted" => encrypted = Some(parse_bool(value)),
-            "Page size" => page_size = Some(value.to_string()),
-            "Page rot" => page_rot = Some(value.to_string()),
-            "File size" => file_size = Some(value.to_string()),
-            "Optimized" => optimized = Some(parse_bool(value)),
-            "PDF version" => pdf_version = Some(value.to_string()),
-            _ => {}
-        }
-    }
-
-    Ok(PdfInfo {
-        title,
-        subject,
-        keywords,
-        author,
-        producer,
-        creation_date,
-        mod_date,
-        custom_metadata,
-        metadata_stream,
-        tagged,
-        user_properties,
-        suspects,
-        form,
-        javascript,
-        pages,
-        encrypted,
-        page_size,
-        page_rot,
-        file_size,
-        optimized,
-        pdf_version,
-    })
+    Ok(PdfInfo { data })
 }
 
 #[cfg(test)]
 mod test {
+    use tokio::fs::read;
+
     use super::{parse_pdf_info, pdf_info};
 
     #[tokio::test]
@@ -188,6 +191,17 @@ mod test {
         let value = &[b'A'];
         let err = pdf_info(value).await.unwrap_err();
         assert!(matches!(err, crate::info::PdfInfoError::NotPdfFile));
+    }
+
+    #[tokio::test]
+    async fn test_actual_files() {
+        let data = read("./tests/samples/test-pdf-2-pages.pdf").await.unwrap();
+        let info = pdf_info(&data).await.unwrap();
+        assert_eq!(info.pages(), Some(Ok(2)));
+
+        let data = read("./tests/samples/test-pdf.pdf").await.unwrap();
+        let info = pdf_info(&data).await.unwrap();
+        assert_eq!(info.pages(), Some(Ok(1)));
     }
 
     #[test]
@@ -217,46 +231,35 @@ PDF version:     1.2
         "#;
         let output = parse_pdf_info(value).unwrap();
 
+        assert_eq!(output.title(), Some("Ropes: an Alternative to Strings"));
+        assert_eq!(output.subject(), Some(""));
         assert_eq!(
-            output.title,
-            Some("Ropes: an Alternative to Strings".to_string())
-        );
-        assert_eq!(output.subject, Some("".to_string()));
-        assert_eq!(
-            output.keywords,
-            Some(
-                "character strings, concatenation, Cedar, immutable, C, balanced trees".to_string()
-            )
+            output.keywords(),
+            Some("character strings, concatenation, Cedar, immutable, C, balanced trees")
         );
         assert_eq!(
-            output.author,
-            Some("Hans-J. Boehm, Russ Atkinson and Michael Plass".to_string())
+            output.author(),
+            Some("Hans-J. Boehm, Russ Atkinson and Michael Plass")
         );
+        assert_eq!(output.producer(), Some("Acrobat Distiller 2.0 for Windows"));
         assert_eq!(
-            output.producer,
-            Some("Acrobat Distiller 2.0 for Windows".to_string())
+            output.creation_date(),
+            Some("Sun Aug 25 21:00:20 1996 NZST")
         );
-        assert_eq!(
-            output.creation_date,
-            Some("Sun Aug 25 21:00:20 1996 NZST".to_string())
-        );
-        assert_eq!(
-            output.mod_date,
-            Some("Sat Nov  2 06:49:17 1996 NZDT".to_string())
-        );
-        assert_eq!(output.custom_metadata, Some(false));
-        assert_eq!(output.metadata_stream, Some(false));
-        assert_eq!(output.tagged, Some(false));
-        assert_eq!(output.user_properties, Some(false));
-        assert_eq!(output.suspects, Some(false));
-        assert_eq!(output.form, Some("none".to_string()));
-        assert_eq!(output.javascript, Some(false));
-        assert_eq!(output.pages, Some(16));
-        assert_eq!(output.encrypted, Some(false));
-        assert_eq!(output.page_size, Some("540 x 738 pts".to_string()));
-        assert_eq!(output.page_rot, Some("0".to_string()));
-        assert_eq!(output.file_size, Some("169205 bytes".to_string()));
-        assert_eq!(output.optimized, Some(true));
-        assert_eq!(output.pdf_version, Some("1.2".to_string()));
+        assert_eq!(output.mod_date(), Some("Sat Nov  2 06:49:17 1996 NZDT"));
+        assert_eq!(output.custom_metadata(), Some(false));
+        assert_eq!(output.metadata_stream(), Some(false));
+        assert_eq!(output.tagged(), Some(false));
+        assert_eq!(output.user_properties(), Some(false));
+        assert_eq!(output.suspects(), Some(false));
+        assert_eq!(output.form(), Some("none"));
+        assert_eq!(output.javascript(), Some(false));
+        assert_eq!(output.pages(), Some(Ok(16)));
+        assert_eq!(output.encrypted(), Some(false));
+        assert_eq!(output.page_size(), Some("540 x 738 pts"));
+        assert_eq!(output.page_rot(), Some("0"));
+        assert_eq!(output.file_size(), Some("169205 bytes"));
+        assert_eq!(output.optimized(), Some(true));
+        assert_eq!(output.pdf_version(), Some("1.2"));
     }
 }
