@@ -18,10 +18,15 @@ pub enum PdfTextError {
     PdfTextFailure(String),
 }
 
-/// Renders a specific page from the pdf file
-pub(crate) async fn pages_text<'data, 'options: 'data>(
-    data: &'data [u8],
-) -> Result<String, PdfTextError> {
+/// Extracts the text contents from the provided pdf file data
+/// using the `pdftotext` program.
+///
+/// Extracts the text from all the pages into a single string
+/// use [page_text] to extract the text for a single page
+///
+/// ## Arguments
+/// * data - The raw PDF file bytes
+pub(crate) async fn pages_text(data: &[u8]) -> Result<String, PdfTextError> {
     let mut child = Command::new("pdftotext")
         // Take input from stdin and provide to stdout
         .args(["-", "-"])
@@ -32,11 +37,11 @@ pub(crate) async fn pages_text<'data, 'options: 'data>(
         .spawn()
         .map_err(PdfTextError::SpawnProcess)?;
 
-    // UNWRAP SAFETY: The child process is guaranteed to have a stdin as .stdin(Stdio::piped()) was called
     child
         .stdin
         .as_mut()
-        .unwrap()
+        // Should always have stdin when using .stdin(Stdio::piped())
+        .expect("progress missing stdin after being piped")
         .write_all(data)
         .await
         .map_err(PdfTextError::WritePdf)?;
@@ -58,11 +63,13 @@ pub(crate) async fn pages_text<'data, 'options: 'data>(
     Ok(value.into_owned())
 }
 
-/// Renders a specific page from the pdf file
-pub(crate) async fn page_text<'data, 'options: 'data>(
-    data: &'data [u8],
-    page: u32,
-) -> Result<String, PdfTextError> {
+/// Extracts the text contents from the provided pdf file data
+/// using the `pdftotext` program
+///
+/// ## Arguments
+/// * data - The raw PDF file
+/// * page - The page to extract text from
+pub(crate) async fn page_text(data: &[u8], page: u32) -> Result<String, PdfTextError> {
     let mut child = Command::new("pdftotext")
         // Take input from stdin and provide to stdout
         .args(["-", "-"])
@@ -80,11 +87,11 @@ pub(crate) async fn page_text<'data, 'options: 'data>(
         .spawn()
         .map_err(PdfTextError::SpawnProcess)?;
 
-    // UNWRAP SAFETY: The child process is guaranteed to have a stdin as .stdin(Stdio::piped()) was called
     child
         .stdin
         .as_mut()
-        .unwrap()
+        // Should always have stdin when using .stdin(Stdio::piped())
+        .expect("progress missing stdin after being piped")
         .write_all(data)
         .await
         .map_err(PdfTextError::WritePdf)?;
@@ -112,6 +119,7 @@ mod test {
 
     use crate::text::{page_text, pages_text};
 
+    /// Tests reading text from all pages
     #[tokio::test]
     async fn test_all_content() {
         let expected = "Test pdf with text in it\n\n\u{c}";
@@ -120,6 +128,7 @@ mod test {
         assert_eq!(text.as_str(), expected);
     }
 
+    /// Tests reading the text from a specific page
     #[tokio::test]
     async fn test_specific_page() {
         let data = read("./tests/samples/test-pdf-2-pages.pdf").await.unwrap();
