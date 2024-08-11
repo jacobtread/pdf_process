@@ -146,6 +146,11 @@ pub struct PdfInfoArgs {
 }
 
 impl PdfInfoArgs {
+    pub fn set_password(mut self, password: Password) -> Self {
+        self.password = Some(password);
+        self
+    }
+
     /// Builds an argument list from all the options
     pub fn build_args(&self) -> Vec<String> {
         let mut out = Vec::new();

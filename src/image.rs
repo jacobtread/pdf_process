@@ -13,6 +13,7 @@ use tokio::{io::AsyncWriteExt, process::Command};
 
 use crate::{info::PdfInfo, shared::Password};
 
+/// Arguments for rendering
 #[derive(Default)]
 pub struct RenderArgs {
     /// Optional custom resolution to render at, defaults to 150 PPI
@@ -32,6 +33,36 @@ pub struct RenderArgs {
 }
 
 impl RenderArgs {
+    pub fn set_resolution(mut self, resolution: Resolution) -> Self {
+        self.resolution = Some(resolution);
+        self
+    }
+
+    pub fn set_scale_to(mut self, scale_to: ScaleTo) -> Self {
+        self.scale_to = Some(scale_to);
+        self
+    }
+
+    pub fn set_render_area(mut self, render_area: RenderArea) -> Self {
+        self.render_area = Some(render_area);
+        self
+    }
+
+    pub fn set_render_color(mut self, render_color: RenderColor) -> Self {
+        self.render_color = Some(render_color);
+        self
+    }
+
+    pub fn set_page_color(mut self, page_color: PageColor) -> Self {
+        self.page_color = Some(page_color);
+        self
+    }
+
+    pub fn set_password(mut self, password: Password) -> Self {
+        self.password = Some(password);
+        self
+    }
+
     /// Builds an argument list from all the options
     pub fn build_args(&self) -> Vec<String> {
         let mut out = Vec::new();

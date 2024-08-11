@@ -10,6 +10,14 @@ pub enum Password {
 }
 
 impl Password {
+    pub fn owner(value: impl Into<String>) -> Self {
+        Self::Owner(Secret(value.into()))
+    }
+
+    pub fn user(value: impl Into<String>) -> Self {
+        Self::User(Secret(value.into()))
+    }
+
     pub fn push_arg(&self, args: &mut Vec<String>) {
         match self {
             Password::Owner(password) => {
@@ -28,6 +36,12 @@ impl Password {
 /// values that shouldn't be printed
 #[derive(Clone)]
 pub struct Secret<T>(pub T);
+
+impl<T> From<T> for Secret<T> {
+    fn from(value: T) -> Self {
+        Self(value)
+    }
+}
 
 impl<T> Debug for Secret<T> {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
