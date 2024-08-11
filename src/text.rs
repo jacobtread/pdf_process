@@ -212,7 +212,7 @@ pub async fn text_single_page(
 /// ## Arguments
 /// * data - The raw PDF file bytes
 /// * args - Extra args to provide to pdftotext
-pub(crate) async fn pages_text(data: &[u8], args: &PdfTextArgs) -> Result<String, PdfTextError> {
+async fn pages_text(data: &[u8], args: &PdfTextArgs) -> Result<String, PdfTextError> {
     let cli_args = args.build_args();
     let mut child = Command::new("pdftotext")
         // Take input from stdin and provide to stdout
@@ -272,11 +272,7 @@ pub(crate) async fn pages_text(data: &[u8], args: &PdfTextArgs) -> Result<String
 /// * data - The raw PDF file
 /// * page - The page to extract text from
 /// * args - Extra args to provide to pdftotext
-pub(crate) async fn page_text(
-    data: &[u8],
-    page: u32,
-    args: &PdfTextArgs,
-) -> Result<String, PdfTextError> {
+async fn page_text(data: &[u8], page: u32, args: &PdfTextArgs) -> Result<String, PdfTextError> {
     let cli_args = args.build_args();
     let mut child = Command::new("pdftotext")
         // Take input from stdin and provide to stdout

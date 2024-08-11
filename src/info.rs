@@ -218,7 +218,7 @@ fn parse_bool(value: &str) -> bool {
 }
 
 /// Parses the fields from the pdfinfo response
-pub(crate) fn parse_pdf_info(output: &str) -> Result<PdfInfo, PdfInfoError> {
+fn parse_pdf_info(output: &str) -> Result<PdfInfo, PdfInfoError> {
     let data = output
         .lines()
         .filter_map(|line| {

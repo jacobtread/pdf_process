@@ -458,7 +458,7 @@ pub async fn render_single_page(
 }
 
 /// Renders the provided page from a pdf file using `pdftocairo`
-pub(crate) async fn render_page(
+async fn render_page(
     data: &[u8],
     format: OutputFormat,
     page: u32,
