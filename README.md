@@ -1,4 +1,4 @@
-# Pdf Process
+# PDF Process
 
 Library for processing PDF files in Rust, wraps the CLI utilities provided by [Poppler](https://poppler.freedesktop.org/) specifically `pdftotext` (Text extraction), `pdftocairo` (Image rendering), `pdfinfo` (Extracting basic details)
 
