@@ -58,6 +58,19 @@ impl PdfTextArgs {
     }
 }
 
+/// Extracts the text from all the pages in the provided PDF.
+/// Replaces the page break characters with a single new line
+/// provides all pages as a single string.
+///
+/// Use [text_all_pages_split] to get a separate string for
+/// each page as a list
+///
+/// If you only want a specific page use [text_single_page]
+///
+/// ## Arguments
+/// * data - The raw PDF file bytes
+/// * info - The PDF info to use for the page count and encryption state
+/// * args - Optional args for the pdf to text
 pub async fn text_all_pages(
     data: &[u8],
     info: &PdfInfo,
@@ -76,6 +89,17 @@ pub async fn text_all_pages(
     Ok(value)
 }
 
+/// Extracts the text from all the pages in the provided PDF.
+/// Provides a list of strings one string per page. Pages are
+/// split on the [PAGE_END_CHARACTER]
+///
+/// If you only want a specific page use [text_single_page]
+///
+///
+/// ## Arguments
+/// * data - The raw PDF file bytes
+/// * info - The PDF info to use for the page count and encryption state
+/// * args - Optional args for the pdf to text
 pub async fn text_all_pages_split(
     data: &[u8],
     info: &PdfInfo,
@@ -95,6 +119,17 @@ pub async fn text_all_pages_split(
         .collect())
 }
 
+/// Extracts the text from the  provided pages in the provided PDF.
+/// Provides a list of strings one string per page. Pages are
+/// split on the [PAGE_END_CHARACTER]
+///
+/// If you only want a specific page use [text_single_page]
+///
+/// ## Arguments
+/// * data - The raw PDF file bytes
+/// * info - The PDF info to use for the page count and encryption state
+/// * pages - The page numbers to get text from
+/// * args - Optional args for the pdf to text
 pub async fn text_pages(
     data: &[u8],
     info: &PdfInfo,
@@ -127,6 +162,13 @@ pub async fn text_pages(
         .await
 }
 
+/// Extracts the text from the specific pages in the provided PDF.
+///
+/// ## Arguments
+/// * data - The raw PDF file bytes
+/// * info - The PDF info to use for the page count and encryption state
+/// * page - The page number to get text from
+/// * args - Optional args for the pdf to text
 pub async fn text_single_page(
     data: &[u8],
     info: &PdfInfo,
@@ -157,6 +199,9 @@ pub async fn text_single_page(
 ///
 /// Extracts the text from all the pages into a single string
 /// use [page_text] to extract the text for a single page
+///
+/// INTERNAL USE ONLY: Does not validate that the page is within the
+/// valid page bounds use one of the other functions above
 ///
 /// ## Arguments
 /// * data - The raw PDF file bytes
@@ -213,6 +258,9 @@ pub(crate) async fn pages_text(data: &[u8], args: &PdfTextArgs) -> Result<String
 
 /// Extracts the text contents from the provided pdf file data
 /// using the `pdftotext` program
+///
+/// INTERNAL USE ONLY: Does not validate that the page is within the
+/// valid page bounds use one of the other functions above
 ///
 /// ## Arguments
 /// * data - The raw PDF file
@@ -288,8 +336,6 @@ pub(crate) async fn page_text(
 
 #[cfg(test)]
 mod test {
-    use tokio::fs::read;
-
     use crate::{
         info::{pdf_info, PdfInfoArgs},
         shared::{Password, Secret},
@@ -298,6 +344,7 @@ mod test {
             text_single_page, PdfTextArgs, PdfTextError,
         },
     };
+    use tokio::fs::read;
 
     /// Tests invalid files are handled
     #[tokio::test]
