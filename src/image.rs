@@ -5,7 +5,7 @@ use image::{DynamicImage, ImageError, ImageFormat};
 use thiserror::Error;
 use tokio::{io::AsyncWriteExt, process::Command};
 
-use crate::info::PdfInfo;
+use crate::{info::PdfInfo, shared::Password};
 
 #[derive(Default)]
 pub struct RenderArgs {
@@ -55,30 +55,6 @@ impl RenderArgs {
         }
 
         out
-    }
-}
-
-/// Password for a DPF
-#[derive(Debug, Clone)]
-pub enum Password {
-    /// Specify the owner password for the PDF file.  Providing this will bypass all security re‐strictions.
-    Owner(String),
-    /// Specify the user password for the PDF file.
-    User(String),
-}
-
-impl Password {
-    pub fn push_arg(&self, args: &mut Vec<String>) {
-        match self {
-            Password::Owner(password) => {
-                args.push("-opw".to_string());
-                args.push(password.to_string())
-            }
-            Password::User(password) => {
-                args.push("-upw".to_string());
-                args.push(password.to_string())
-            }
-        }
     }
 }
 
@@ -543,7 +519,10 @@ mod test {
     use super::{
         render_all_pages, render_page, render_pages, render_single_page, PdfRenderError, RenderArgs,
     };
-    use crate::info::pdf_info;
+    use crate::{
+        info::{pdf_info, PdfInfoArgs},
+        shared::{Password, Secret},
+    };
     use tokio::fs::read;
 
     /// Tests invalid files are handled
@@ -561,7 +540,7 @@ mod test {
     #[tokio::test]
     async fn test_all_pages() {
         let data = read("./tests/samples/test-pdf-2-pages.pdf").await.unwrap();
-        let info = pdf_info(&data).await.unwrap();
+        let info = pdf_info(&data, &PdfInfoArgs::default()).await.unwrap();
         let args = RenderArgs::default();
         let output = render_all_pages(&data, &info, crate::image::OutputFormat::Jpeg, &args)
             .await
@@ -575,7 +554,7 @@ mod test {
     async fn test_specific_page() {
         let data = read("./tests/samples/test-pdf-2-pages.pdf").await.unwrap();
 
-        let info = pdf_info(&data).await.unwrap();
+        let info = pdf_info(&data, &PdfInfoArgs::default()).await.unwrap();
         let args = RenderArgs::default();
 
         let _output = render_single_page(&data, &info, crate::image::OutputFormat::Jpeg, 1, &args)
@@ -588,7 +567,7 @@ mod test {
     async fn test_specific_pages() {
         let data = read("./tests/samples/test-pdf-2-pages.pdf").await.unwrap();
 
-        let info = pdf_info(&data).await.unwrap();
+        let info = pdf_info(&data, &PdfInfoArgs::default()).await.unwrap();
         let args = RenderArgs::default();
 
         let output = render_pages(
@@ -610,7 +589,7 @@ mod test {
     async fn test_page_bounds() {
         let data = read("./tests/samples/test-pdf-2-pages.pdf").await.unwrap();
 
-        let info = pdf_info(&data).await.unwrap();
+        let info = pdf_info(&data, &PdfInfoArgs::default()).await.unwrap();
         let args = RenderArgs::default();
 
         let err = render_single_page(&data, &info, crate::image::OutputFormat::Jpeg, 99, &args)
@@ -629,5 +608,78 @@ mod test {
         .unwrap_err();
 
         assert!(matches!(err, PdfRenderError::PageOutOfBounds(99, 2)));
+    }
+
+    /// Tests prevents rendering when the pdf info specifies a password
+    /// but the render args didn't provide a password
+    #[tokio::test]
+    async fn test_encrypted() {
+        let data = read("./tests/samples/test-pdf-2-pages-encrypted.pdf")
+            .await
+            .unwrap();
+
+        let info_args = PdfInfoArgs {
+            password: Some(Password::User(Secret("password".to_string()))),
+        };
+
+        let info = pdf_info(&data, &info_args).await.unwrap();
+        let args = RenderArgs::default();
+
+        let err = render_single_page(&data, &info, crate::image::OutputFormat::Jpeg, 99, &args)
+            .await
+            .unwrap_err();
+        assert!(matches!(err, PdfRenderError::PdfEncrypted));
+
+        let err = render_pages(
+            &data,
+            &info,
+            crate::image::OutputFormat::Jpeg,
+            vec![99],
+            &args,
+        )
+        .await
+        .unwrap_err();
+
+        assert!(matches!(err, PdfRenderError::PdfEncrypted));
+    }
+
+    /// Tests rendering an encrypted pdf when the password is provided
+    #[tokio::test]
+    async fn test_encrypted_with_password() {
+        let data = read("./tests/samples/test-pdf-2-pages-encrypted.pdf")
+            .await
+            .unwrap();
+
+        let info_args = PdfInfoArgs {
+            password: Some(Password::User(Secret("password".to_string()))),
+        };
+
+        let info = pdf_info(&data, &info_args).await.unwrap();
+        let args = RenderArgs {
+            password: Some(Password::User(Secret("password".to_string()))),
+            ..Default::default()
+        };
+
+        let _output = render_single_page(&data, &info, crate::image::OutputFormat::Jpeg, 2, &args)
+            .await
+            .unwrap();
+
+        let output = render_all_pages(&data, &info, crate::image::OutputFormat::Jpeg, &args)
+            .await
+            .unwrap();
+
+        assert_eq!(output.len(), 2);
+
+        let output = render_pages(
+            &data,
+            &info,
+            crate::image::OutputFormat::Jpeg,
+            vec![1, 2],
+            &args,
+        )
+        .await
+        .unwrap();
+
+        assert_eq!(output.len(), 2);
     }
 }

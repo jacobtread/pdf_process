@@ -3,6 +3,8 @@ use std::{collections::HashMap, num::ParseIntError, process::Stdio};
 use thiserror::Error;
 use tokio::{io::AsyncWriteExt, process::Command};
 
+use crate::shared::Password;
+
 #[derive(Debug)]
 pub struct PdfInfo {
     /// Data parsed from the pdfinfo cli
@@ -83,7 +85,11 @@ impl PdfInfo {
     }
 
     pub fn encrypted(&self) -> Option<bool> {
-        self.data("Encrypted").map(parse_bool)
+        self.data("Encrypted").map(|value| value.starts_with("yes"))
+    }
+
+    pub fn encryption(&self) -> Option<&str> {
+        self.data("Encrypted")
     }
 
     pub fn page_rot(&self) -> Option<&str> {
@@ -119,13 +125,38 @@ pub enum PdfInfoError {
     #[error("failed to get pdfinfo exit code: {0}")]
     PdfInfoFailure(String),
 
+    #[error("pdf file is encrypted")]
+    PdfEncrypted,
+
     #[error("file is not a pdf")]
     NotPdfFile,
 }
 
-pub async fn pdf_info(bytes: &[u8]) -> Result<PdfInfo, PdfInfoError> {
+#[derive(Debug, Default, Clone)]
+pub struct PdfInfoArgs {
+    /// Password for the PDF
+    pub password: Option<Password>,
+}
+
+impl PdfInfoArgs {
+    /// Builds an argument list from all the options
+    pub fn build_args(&self) -> Vec<String> {
+        let mut out = Vec::new();
+
+        if let Some(password) = self.password.as_ref() {
+            password.push_arg(&mut out);
+        }
+
+        out
+    }
+}
+
+pub async fn pdf_info(bytes: &[u8], args: &PdfInfoArgs) -> Result<PdfInfo, PdfInfoError> {
+    let args = args.build_args();
+
     let mut child = Command::new("pdfinfo")
         .args(["-"] /* PASS PDF THROUGH STDIN */)
+        .args(args)
         .stdin(Stdio::piped())
         .stdout(Stdio::piped())
         .stderr(Stdio::piped())
@@ -152,6 +183,10 @@ pub async fn pdf_info(bytes: &[u8]) -> Result<PdfInfo, PdfInfoError> {
 
         if value.contains("May not be a PDF file") {
             return Err(PdfInfoError::NotPdfFile);
+        }
+
+        if value.contains("Incorrect password") {
+            return Err(PdfInfoError::PdfEncrypted);
         }
 
         return Err(PdfInfoError::PdfInfoFailure(value.to_string()));
@@ -182,28 +217,66 @@ pub fn parse_pdf_info(output: &str) -> Result<PdfInfo, PdfInfoError> {
 
 #[cfg(test)]
 mod test {
+    use super::{parse_pdf_info, pdf_info, PdfInfoArgs};
+    use crate::shared::{Password, Secret};
     use tokio::fs::read;
 
-    use super::{parse_pdf_info, pdf_info};
-
+    /// Tests against an invalid file
     #[tokio::test]
     async fn test_invalid_file() {
         let value = &[b'A'];
-        let err = pdf_info(value).await.unwrap_err();
+        let err = pdf_info(value, &PdfInfoArgs::default()).await.unwrap_err();
         assert!(matches!(err, crate::info::PdfInfoError::NotPdfFile));
     }
 
+    /// Tests from actual files
     #[tokio::test]
     async fn test_actual_files() {
         let data = read("./tests/samples/test-pdf-2-pages.pdf").await.unwrap();
-        let info = pdf_info(&data).await.unwrap();
+        let info = pdf_info(&data, &PdfInfoArgs::default()).await.unwrap();
         assert_eq!(info.pages(), Some(Ok(2)));
 
         let data = read("./tests/samples/test-pdf.pdf").await.unwrap();
-        let info = pdf_info(&data).await.unwrap();
+        let info = pdf_info(&data, &PdfInfoArgs::default()).await.unwrap();
         assert_eq!(info.pages(), Some(Ok(1)));
     }
 
+    /// Tests getting pdfinfo from an encrypted file when the password is not set
+    #[tokio::test]
+    async fn test_encrypted() {
+        let data = read("./tests/samples/test-pdf-2-pages-encrypted.pdf")
+            .await
+            .unwrap();
+
+        let err = pdf_info(&data, &PdfInfoArgs::default()).await.unwrap_err();
+
+        assert!(matches!(err, crate::info::PdfInfoError::PdfEncrypted));
+    }
+
+    /// Tests getting pdfinfo from a encrypted file when the password is set
+    #[tokio::test]
+    async fn test_encrypted_with_password() {
+        let data = read("./tests/samples/test-pdf-2-pages-encrypted.pdf")
+            .await
+            .unwrap();
+        let args = PdfInfoArgs {
+            password: Some(Password::Owner(Secret("password".to_string()))),
+        };
+        let info = pdf_info(&data, &args).await.unwrap();
+
+        assert_eq!(info.pages(), Some(Ok(2)));
+        assert_eq!(info.encrypted(), Some(true));
+
+        let args = PdfInfoArgs {
+            password: Some(Password::User(Secret("password".to_string()))),
+        };
+        let info = pdf_info(&data, &args).await.unwrap();
+
+        assert_eq!(info.pages(), Some(Ok(2)));
+        assert_eq!(info.encrypted(), Some(true));
+    }
+
+    /// Tests the output parser logic
     #[test]
     fn test_parsing_output() {
         let value = r#"

@@ -3,6 +3,8 @@ use std::process::Stdio;
 use thiserror::Error;
 use tokio::{io::AsyncWriteExt, process::Command};
 
+use crate::shared::Password;
+
 #[derive(Debug, Error)]
 pub enum PdfTextError {
     #[error("failed to spawn pdftotext: {0}")]
@@ -18,6 +20,25 @@ pub enum PdfTextError {
     PdfTextFailure(String),
 }
 
+#[derive(Debug, Default, Clone)]
+pub struct PdfTextArgs {
+    /// Password for the PDF
+    pub password: Option<Password>,
+}
+
+impl PdfTextArgs {
+    /// Builds an argument list from all the options
+    pub fn build_args(&self) -> Vec<String> {
+        let mut out = Vec::new();
+
+        if let Some(password) = self.password.as_ref() {
+            password.push_arg(&mut out);
+        }
+
+        out
+    }
+}
+
 /// Extracts the text contents from the provided pdf file data
 /// using the `pdftotext` program.
 ///
@@ -26,10 +47,13 @@ pub enum PdfTextError {
 ///
 /// ## Arguments
 /// * data - The raw PDF file bytes
-pub(crate) async fn pages_text(data: &[u8]) -> Result<String, PdfTextError> {
+/// * args - Extra args to provide to pdftotext
+pub(crate) async fn pages_text(data: &[u8], args: &PdfTextArgs) -> Result<String, PdfTextError> {
+    let args = args.build_args();
     let mut child = Command::new("pdftotext")
         // Take input from stdin and provide to stdout
         .args(["-", "-"])
+        .args(args)
         // Pipe input and output for use
         .stdin(Stdio::piped())
         .stdout(Stdio::piped())
@@ -69,7 +93,13 @@ pub(crate) async fn pages_text(data: &[u8]) -> Result<String, PdfTextError> {
 /// ## Arguments
 /// * data - The raw PDF file
 /// * page - The page to extract text from
-pub(crate) async fn page_text(data: &[u8], page: u32) -> Result<String, PdfTextError> {
+/// * args - Extra args to provide to pdftotext
+pub(crate) async fn page_text(
+    data: &[u8],
+    page: u32,
+    args: &PdfTextArgs,
+) -> Result<String, PdfTextError> {
+    let args = args.build_args();
     let mut child = Command::new("pdftotext")
         // Take input from stdin and provide to stdout
         .args(["-", "-"])
@@ -80,6 +110,7 @@ pub(crate) async fn page_text(data: &[u8], page: u32) -> Result<String, PdfTextE
             "-l".to_string(),
             format!("{page}"),
         ])
+        .args(args)
         // Pipe input and output for use
         .stdin(Stdio::piped())
         .stdout(Stdio::piped())
@@ -117,14 +148,14 @@ pub(crate) async fn page_text(data: &[u8], page: u32) -> Result<String, PdfTextE
 mod test {
     use tokio::fs::read;
 
-    use crate::text::{page_text, pages_text};
+    use crate::text::{page_text, pages_text, PdfTextArgs};
 
     /// Tests reading text from all pages
     #[tokio::test]
     async fn test_all_content() {
         let expected = "Test pdf with text in it\n\n\u{c}";
         let data = read("./tests/samples/test-pdf.pdf").await.unwrap();
-        let text = pages_text(&data).await.unwrap();
+        let text = pages_text(&data, &PdfTextArgs::default()).await.unwrap();
         assert_eq!(text.as_str(), expected);
     }
 
@@ -134,11 +165,11 @@ mod test {
         let data = read("./tests/samples/test-pdf-2-pages.pdf").await.unwrap();
 
         let expected = "Test pdf with text in it\n\n\u{c}";
-        let text = page_text(&data, 1).await.unwrap();
+        let text = page_text(&data, 1, &PdfTextArgs::default()).await.unwrap();
         assert_eq!(text.as_str(), expected);
 
         let expected = "Test page 2\n\n\u{c}";
-        let text = page_text(&data, 2).await.unwrap();
+        let text = page_text(&data, 2, &PdfTextArgs::default()).await.unwrap();
         assert_eq!(text.as_str(), expected);
     }
 }
