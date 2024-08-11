@@ -299,6 +299,15 @@ mod test {
         },
     };
 
+    /// Tests invalid files are handled
+    #[tokio::test]
+    async fn test_invalid_file() {
+        let err = pages_text(&[b'A'], &PdfTextArgs::default())
+            .await
+            .unwrap_err();
+        assert!(matches!(err, PdfTextError::NotPdfFile));
+    }
+
     /// Tests reading text from all pages
     #[tokio::test]
     async fn test_all_content() {
@@ -389,6 +398,23 @@ mod test {
             .await
             .unwrap();
         assert_eq!(text, expected);
+    }
+
+    /// Tests preventing attempts extracting text on a page that goes out
+    /// of bounds from the acceptable number of pages
+    #[tokio::test]
+    async fn test_page_bounds() {
+        let data = read("./tests/samples/test-pdf-2-pages.pdf").await.unwrap();
+
+        let info = pdf_info(&data, &PdfInfoArgs::default()).await.unwrap();
+        let args = PdfTextArgs::default();
+
+        let err = text_single_page(&data, &info, 99, &args).await.unwrap_err();
+        assert!(matches!(err, PdfTextError::PageOutOfBounds(99, 2)));
+
+        let err = text_pages(&data, &info, vec![99], &args).await.unwrap_err();
+
+        assert!(matches!(err, PdfTextError::PageOutOfBounds(99, 2)));
     }
 
     /// Tests reading when the file is encrypted
