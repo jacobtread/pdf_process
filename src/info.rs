@@ -1,3 +1,7 @@
+//! Helpers getting info about PDF files
+//!  
+//! * [pdf_info] - Get info from a PDF file
+
 use std::{collections::HashMap, num::ParseIntError, process::Stdio};
 
 use thiserror::Error;

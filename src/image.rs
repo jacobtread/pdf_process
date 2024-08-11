@@ -1,3 +1,9 @@
+//! Helpers for rendering images from PDF files
+//!  
+//! * [render_all_pages] - Renders all pages in the PDF file
+//! * [render_pages] - Renders a specific set of pages
+//! * [render_single_page] - Renders a specific page
+
 use std::process::Stdio;
 
 use futures::{stream::FuturesOrdered, TryStreamExt};

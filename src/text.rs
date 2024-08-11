@@ -1,6 +1,12 @@
-use std::process::Stdio;
+//! Helpers for rendering images from PDF files
+//!  
+//! * [text_all_pages] - Gets the text from all pages as a single string
+//! * [text_all_pages_split] - Gets the text from all pages as separate strings
+//! * [text_pages] - Gets the text from a specific set of pages as separate strings
+//! * [text_single_page] - Gets the text from a specific page
 
 use futures::{stream::FuturesOrdered, TryStreamExt};
+use std::process::Stdio;
 use thiserror::Error;
 use tokio::{io::AsyncWriteExt, process::Command};
 
