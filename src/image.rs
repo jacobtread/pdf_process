@@ -6,7 +6,7 @@
 
 use std::process::Stdio;
 
-use futures::{stream::FuturesOrdered, TryStreamExt};
+use futures_util::{stream::FuturesOrdered, TryStreamExt};
 use image::{DynamicImage, ImageError, ImageFormat};
 use thiserror::Error;
 use tokio::{io::AsyncWriteExt, process::Command};

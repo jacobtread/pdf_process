@@ -19,7 +19,9 @@ categories = [
 [dependencies]
 # Async runtime & utils
 tokio = { version = "1", features = ["io-util", "process"] }
-futures = "0.3"
+futures-util = { version = "^0.3", default-features = false, features = [
+    "std",
+] }
 
 # Image 
 image = { version = "0.25.1", default-features = false, features = [

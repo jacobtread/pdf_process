@@ -5,7 +5,7 @@
 //! * [text_pages] - Gets the text from a specific set of pages as separate strings
 //! * [text_single_page] - Gets the text from a specific page
 
-use futures::{stream::FuturesOrdered, TryStreamExt};
+use futures_util::{stream::FuturesOrdered, TryStreamExt};
 use std::process::Stdio;
 use thiserror::Error;
 use tokio::{io::AsyncWriteExt, process::Command};
