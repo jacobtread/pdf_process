@@ -1,6 +1,6 @@
 [package]
 name = "pdf_process"
-version = "0.0.0"
+version = "0.1.0"
 edition = "2021"
 description = "Library for rendering and extracting metadata/text from PDF files using poppler"
 readme = "README.md"
