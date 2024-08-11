@@ -14,8 +14,8 @@ impl PdfInfo {
         self.data.get(key).map(String::as_str)
     }
 
-    pub fn pages(&self) -> Option<Result<usize, ParseIntError>> {
-        self.data("Pages").map(|value| value.parse::<usize>())
+    pub fn pages(&self) -> Option<Result<u32, ParseIntError>> {
+        self.data("Pages").map(|value| value.parse::<u32>())
     }
 
     pub fn title(&self) -> Option<&str> {

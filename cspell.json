@@ -1,6 +1,9 @@
 {
     "words": [
+        "antialiasing",
+        "cropbox",
         "pdfinfo",
+        "pdftocairo",
         "pdftotext"
     ]
 }
