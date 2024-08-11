@@ -154,6 +154,11 @@ impl PdfInfoArgs {
     }
 }
 
+/// Extracts information about the provided PDF file
+///
+/// ## Arguments
+/// * data - The raw PDF file bytes
+/// * args - Extra args to provide to pdfinfo
 pub async fn pdf_info(bytes: &[u8], args: &PdfInfoArgs) -> Result<PdfInfo, PdfInfoError> {
     let cli_args = args.build_args();
 
@@ -209,7 +214,7 @@ fn parse_bool(value: &str) -> bool {
 }
 
 /// Parses the fields from the pdfinfo response
-pub fn parse_pdf_info(output: &str) -> Result<PdfInfo, PdfInfoError> {
+pub(crate) fn parse_pdf_info(output: &str) -> Result<PdfInfo, PdfInfoError> {
     let data = output
         .lines()
         .filter_map(|line| {
