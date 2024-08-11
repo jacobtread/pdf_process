@@ -1,6 +1,6 @@
 use pdf_process::{
     pdf_info, text_all_pages, text_all_pages_split, text_pages, text_single_page, Password,
-    PdfInfoArgs, PdfTextArgs, PdfTextError, Secret,
+    PdfInfoArgs, PdfTextArgs, PdfTextError,
 };
 use tokio::fs::read;
 
@@ -97,9 +97,7 @@ async fn test_encrypted() {
         .await
         .unwrap();
 
-    let info_args = PdfInfoArgs {
-        password: Some(Password::User(Secret("password".to_string()))),
-    };
+    let info_args = PdfInfoArgs::default().set_password(Password::user("password"));
 
     let info = pdf_info(&data, &info_args).await.unwrap();
 
@@ -132,15 +130,9 @@ async fn test_encrypted_with_password() {
         .await
         .unwrap();
 
-    let info_args = PdfInfoArgs {
-        password: Some(Password::User(Secret("password".to_string()))),
-    };
-
+    let info_args = PdfInfoArgs::default().set_password(Password::user("password"));
     let info = pdf_info(&data, &info_args).await.unwrap();
-
-    let args = PdfTextArgs {
-        password: Some(Password::User(Secret("password".to_string()))),
-    };
+    let args = PdfTextArgs::default().set_password(Password::user("password"));
 
     text_all_pages(&data, &info, &args).await.unwrap();
     text_single_page(&data, &info, 1, &args).await.unwrap();
@@ -156,15 +148,9 @@ async fn test_encrypted_with_incorrect_password() {
         .await
         .unwrap();
 
-    let info_args = PdfInfoArgs {
-        password: Some(Password::User(Secret("password".to_string()))),
-    };
-
+    let info_args = PdfInfoArgs::default().set_password(Password::user("password"));
     let info = pdf_info(&data, &info_args).await.unwrap();
-
-    let args = PdfTextArgs {
-        password: Some(Password::User(Secret("incorrect".to_string()))),
-    };
+    let args = PdfTextArgs::default().set_password(Password::user("incorrect"));
 
     let err = text_all_pages(&data, &info, &args).await.unwrap_err();
     assert!(matches!(err, PdfTextError::IncorrectPassword));

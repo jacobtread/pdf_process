@@ -1,6 +1,6 @@
 use pdf_process::{
     pdf_info, render_all_pages, render_pages, render_single_page, OutputFormat, Password,
-    PdfInfoArgs, PdfRenderError, RenderArgs, Secret,
+    PdfInfoArgs, PdfRenderError, RenderArgs,
 };
 use tokio::fs::read;
 
@@ -74,10 +74,7 @@ async fn test_encrypted() {
         .await
         .unwrap();
 
-    let info_args = PdfInfoArgs {
-        password: Some(Password::User(Secret("password".to_string()))),
-    };
-
+    let info_args = PdfInfoArgs::default().set_password(Password::user("password"));
     let info = pdf_info(&data, &info_args).await.unwrap();
     let args = RenderArgs::default();
 
@@ -100,15 +97,9 @@ async fn test_encrypted_with_password() {
         .await
         .unwrap();
 
-    let info_args = PdfInfoArgs {
-        password: Some(Password::User(Secret("password".to_string()))),
-    };
-
+    let info_args = PdfInfoArgs::default().set_password(Password::user("password"));
     let info = pdf_info(&data, &info_args).await.unwrap();
-    let args = RenderArgs {
-        password: Some(Password::User(Secret("password".to_string()))),
-        ..Default::default()
-    };
+    let args = RenderArgs::default().set_password(Password::user("password"));
 
     let _output = render_single_page(&data, &info, OutputFormat::Jpeg, 2, &args)
         .await
@@ -135,15 +126,11 @@ async fn test_encrypted_with_incorrect_password() {
         .await
         .unwrap();
 
-    let info_args = PdfInfoArgs {
-        password: Some(Password::User(Secret("password".to_string()))),
-    };
+    let info_args = PdfInfoArgs::default().set_password(Password::user("password"));
 
     let info = pdf_info(&data, &info_args).await.unwrap();
-    let args = RenderArgs {
-        password: Some(Password::User(Secret("incorrect".to_string()))),
-        ..Default::default()
-    };
+    let args = RenderArgs::default().set_password(Password::user("incorrect"));
+
     let err = render_single_page(&data, &info, OutputFormat::Jpeg, 1, &args)
         .await
         .unwrap_err();
