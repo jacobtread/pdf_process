@@ -283,6 +283,20 @@ mod test {
         assert_eq!(info.encrypted(), Some(true));
     }
 
+    /// Tests getting pdfinfo from a encrypted file when the password is set
+    #[tokio::test]
+    async fn test_encrypted_with_incorrect_password() {
+        let data = read("./tests/samples/test-pdf-2-pages-encrypted.pdf")
+            .await
+            .unwrap();
+        let args = PdfInfoArgs {
+            password: Some(Password::User(Secret("incorrect".to_string()))),
+        };
+        let err = pdf_info(&data, &args).await.unwrap_err();
+
+        assert!(matches!(err, crate::info::PdfInfoError::IncorrectPassword));
+    }
+
     /// Tests the output parser logic
     #[test]
     fn test_parsing_output() {

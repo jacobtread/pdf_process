@@ -693,4 +693,39 @@ mod test {
 
         assert_eq!(output.len(), 2);
     }
+
+    /// Tests rendering an encrypted pdf when the password is provided
+    /// but incorrect
+    #[tokio::test]
+    async fn test_encrypted_with_incorrect_password() {
+        let data = read("./tests/samples/test-pdf-2-pages-encrypted.pdf")
+            .await
+            .unwrap();
+
+        let info_args = PdfInfoArgs {
+            password: Some(Password::User(Secret("password".to_string()))),
+        };
+
+        let info = pdf_info(&data, &info_args).await.unwrap();
+        let args = RenderArgs {
+            password: Some(Password::User(Secret("incorrect".to_string()))),
+            ..Default::default()
+        };
+        let err = render_single_page(&data, &info, crate::image::OutputFormat::Jpeg, 1, &args)
+            .await
+            .unwrap_err();
+        assert!(matches!(err, PdfRenderError::IncorrectPassword));
+
+        let err = render_pages(
+            &data,
+            &info,
+            crate::image::OutputFormat::Jpeg,
+            vec![1],
+            &args,
+        )
+        .await
+        .unwrap_err();
+
+        assert!(matches!(err, PdfRenderError::IncorrectPassword));
+    }
 }

@@ -448,4 +448,37 @@ mod test {
         text_all_pages_split(&data, &info, &args).await.unwrap();
         text_pages(&data, &info, vec![1, 2], &args).await.unwrap();
     }
+
+    /// Tests reading when the file is encrypted and the incorrect password
+    /// is provided
+    #[tokio::test]
+    async fn test_encrypted_with_incorrect_password() {
+        let data = read("./tests/samples/test-pdf-2-pages-encrypted.pdf")
+            .await
+            .unwrap();
+
+        let info_args = PdfInfoArgs {
+            password: Some(Password::User(Secret("password".to_string()))),
+        };
+
+        let info = pdf_info(&data, &info_args).await.unwrap();
+
+        let args = PdfTextArgs {
+            password: Some(Password::User(Secret("incorrect".to_string()))),
+        };
+
+        let err = text_all_pages(&data, &info, &args).await.unwrap_err();
+        assert!(matches!(err, PdfTextError::IncorrectPassword));
+
+        let err = text_single_page(&data, &info, 1, &args).await.unwrap_err();
+        assert!(matches!(err, PdfTextError::IncorrectPassword));
+
+        let err = text_all_pages_split(&data, &info, &args).await.unwrap_err();
+        assert!(matches!(err, PdfTextError::IncorrectPassword));
+
+        let err = text_pages(&data, &info, vec![1, 2], &args)
+            .await
+            .unwrap_err();
+        assert!(matches!(err, PdfTextError::IncorrectPassword));
+    }
 }
