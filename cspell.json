@@ -5,6 +5,7 @@
         "pdfinfo",
         "pdftocairo",
         "pdftotext",
-        "Plopper"
+        "Plopper",
+        "poppler"
     ]
 }
