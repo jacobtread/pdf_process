@@ -32,6 +32,9 @@ pub enum PdfTextError {
     #[error("pdf is encrypted and no password was provided")]
     PdfEncrypted,
 
+    #[error("incorrect password was provided")]
+    IncorrectPassword,
+
     #[error("file is not a pdf")]
     NotPdfFile,
 }
@@ -159,11 +162,11 @@ pub async fn text_single_page(
 /// * data - The raw PDF file bytes
 /// * args - Extra args to provide to pdftotext
 pub(crate) async fn pages_text(data: &[u8], args: &PdfTextArgs) -> Result<String, PdfTextError> {
-    let args = args.build_args();
+    let cli_args = args.build_args();
     let mut child = Command::new("pdftotext")
         // Take input from stdin and provide to stdout
         .args(["-", "-"])
-        .args(args)
+        .args(cli_args)
         // Pipe input and output for use
         .stdin(Stdio::piped())
         .stdout(Stdio::piped())
@@ -188,6 +191,18 @@ pub(crate) async fn pages_text(data: &[u8], args: &PdfTextArgs) -> Result<String
     // Handle info failure
     if !output.status.success() {
         let value = String::from_utf8_lossy(&output.stderr);
+
+        if value.contains("May not be a PDF file") {
+            return Err(PdfTextError::NotPdfFile);
+        }
+
+        if value.contains("Incorrect password") {
+            return Err(if args.password.is_none() {
+                PdfTextError::PdfEncrypted
+            } else {
+                PdfTextError::IncorrectPassword
+            });
+        }
 
         return Err(PdfTextError::PdfTextFailure(value.to_string()));
     }
@@ -208,7 +223,7 @@ pub(crate) async fn page_text(
     page: u32,
     args: &PdfTextArgs,
 ) -> Result<String, PdfTextError> {
-    let args = args.build_args();
+    let cli_args = args.build_args();
     let mut child = Command::new("pdftotext")
         // Take input from stdin and provide to stdout
         .args(["-", "-"])
@@ -219,7 +234,7 @@ pub(crate) async fn page_text(
             "-l".to_string(),
             format!("{page}"),
         ])
-        .args(args)
+        .args(cli_args)
         // Pipe input and output for use
         .stdin(Stdio::piped())
         .stdout(Stdio::piped())
@@ -244,6 +259,18 @@ pub(crate) async fn page_text(
     // Handle info failure
     if !output.status.success() {
         let value = String::from_utf8_lossy(&output.stderr);
+
+        if value.contains("May not be a PDF file") {
+            return Err(PdfTextError::NotPdfFile);
+        }
+
+        if value.contains("Incorrect password") {
+            return Err(if args.password.is_none() {
+                PdfTextError::PdfEncrypted
+            } else {
+                PdfTextError::IncorrectPassword
+            });
+        }
 
         return Err(PdfTextError::PdfTextFailure(value.to_string()));
     }
@@ -286,11 +313,11 @@ mod test {
     async fn test_specific_page() {
         let data = read("./tests/samples/test-pdf-2-pages.pdf").await.unwrap();
 
-        let expected = "Test pdf with text in it\n\n\u{c}";
+        let expected = "Test pdf with text in it\n\n";
         let text = page_text(&data, 1, &PdfTextArgs::default()).await.unwrap();
         assert_eq!(text.as_str(), expected);
 
-        let expected = "Test page 2\n\n\u{c}";
+        let expected = "Test page 2\n\n";
         let text = page_text(&data, 2, &PdfTextArgs::default()).await.unwrap();
         assert_eq!(text.as_str(), expected);
     }

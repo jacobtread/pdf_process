@@ -333,6 +333,9 @@ pub enum PdfRenderError {
     #[error("pdf is encrypted and no password was provided")]
     PdfEncrypted,
 
+    #[error("incorrect password was provided")]
+    IncorrectPassword,
+
     #[error("file is not a pdf")]
     NotPdfFile,
 }
@@ -455,8 +458,8 @@ pub(crate) async fn render_page(
     page: u32,
     args: &RenderArgs,
 ) -> Result<DynamicImage, PdfRenderError> {
-    let mut args = args.build_args();
-    format.push_arg(&mut args);
+    let mut cli_args = args.build_args();
+    format.push_arg(&mut cli_args);
 
     let mut child = Command::new("pdftocairo")
         // Take input from stdin and provide to stdout
@@ -470,7 +473,7 @@ pub(crate) async fn render_page(
             &page.to_string(),
         ])
         // Add optional args and output format
-        .args(args)
+        .args(cli_args)
         // Pipe input and output for use
         .stdin(Stdio::piped())
         .stdout(Stdio::piped())
@@ -498,6 +501,14 @@ pub(crate) async fn render_page(
 
         if value.contains("May not be a PDF file") {
             return Err(PdfRenderError::NotPdfFile);
+        }
+
+        if value.contains("Incorrect password") {
+            return Err(if args.password.is_none() {
+                PdfRenderError::PdfEncrypted
+            } else {
+                PdfRenderError::IncorrectPassword
+            });
         }
 
         let code = output.status.code();

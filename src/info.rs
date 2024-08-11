@@ -128,6 +128,9 @@ pub enum PdfInfoError {
     #[error("pdf file is encrypted")]
     PdfEncrypted,
 
+    #[error("incorrect password was provided")]
+    IncorrectPassword,
+
     #[error("file is not a pdf")]
     NotPdfFile,
 }
@@ -152,11 +155,11 @@ impl PdfInfoArgs {
 }
 
 pub async fn pdf_info(bytes: &[u8], args: &PdfInfoArgs) -> Result<PdfInfo, PdfInfoError> {
-    let args = args.build_args();
+    let cli_args = args.build_args();
 
     let mut child = Command::new("pdfinfo")
         .args(["-"] /* PASS PDF THROUGH STDIN */)
-        .args(args)
+        .args(cli_args)
         .stdin(Stdio::piped())
         .stdout(Stdio::piped())
         .stderr(Stdio::piped())
@@ -186,7 +189,11 @@ pub async fn pdf_info(bytes: &[u8], args: &PdfInfoArgs) -> Result<PdfInfo, PdfIn
         }
 
         if value.contains("Incorrect password") {
-            return Err(PdfInfoError::PdfEncrypted);
+            return Err(if args.password.is_none() {
+                PdfInfoError::PdfEncrypted
+            } else {
+                PdfInfoError::IncorrectPassword
+            });
         }
 
         return Err(PdfInfoError::PdfInfoFailure(value.to_string()));
