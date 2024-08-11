@@ -20,13 +20,17 @@ impl Password {
 
     pub fn push_arg(&self, args: &mut Vec<String>) {
         match self {
-            Password::Owner(password) => {
-                args.push("-opw".to_string());
-                args.push(password.0.to_string())
+            Password::Owner(Secret(password)) => {
+                if !password.is_empty() {
+                    args.push("-opw".to_string());
+                    args.push(password.to_string())
+                }
             }
-            Password::User(password) => {
-                args.push("-upw".to_string());
-                args.push(password.0.to_string())
+            Password::User(Secret(password)) => {
+                if !password.is_empty() {
+                    args.push("-upw".to_string());
+                    args.push(password.to_string())
+                }
             }
         }
     }
