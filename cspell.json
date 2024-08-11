@@ -4,6 +4,7 @@
         "cropbox",
         "pdfinfo",
         "pdftocairo",
-        "pdftotext"
+        "pdftotext",
+        "Plopper"
     ]
 }
