@@ -49,6 +49,6 @@ pdf_process = "0.1.0"
 
 **Tested against**:
 
-pdftotext version 24.02.0
-pdftocairo version 24.02.0
-pdfinfo version 24.02.0
+- pdftotext version 24.02.0
+- pdftocairo version 24.02.0
+- pdfinfo version 24.02.0
