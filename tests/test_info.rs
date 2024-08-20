@@ -37,6 +37,14 @@ async fn test_encrypted_with_password() {
     assert_eq!(info.pages(), Some(Ok(2)));
     assert_eq!(info.encrypted(), Some(true));
 
+    let encryption = info.encryption().unwrap().unwrap();
+    assert!(encryption.is_encrypted());
+    assert!(encryption.is_print_allowed());
+    assert!(encryption.is_copy_allowed());
+    assert!(encryption.is_change_allowed());
+    assert!(encryption.is_add_notes_allowed());
+    assert_eq!(encryption.algorithm(), Some("AES"));
+
     let args = PdfInfoArgs::default().set_password(Password::user("password"));
     let info = pdf_info(&data, &args).await.unwrap();
 

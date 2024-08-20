@@ -10,6 +10,89 @@ use tokio::{io::AsyncWriteExt, process::Command};
 use crate::shared::Password;
 
 #[derive(Debug)]
+pub struct PdfInfoEncryption {
+    /// Whether encryption is enabled
+    encrypted: bool,
+    /// Encryption options that are set
+    options: HashMap<String, String>,
+}
+
+impl PdfInfoEncryption {
+    pub fn is_encrypted(&self) -> bool {
+        self.encrypted
+    }
+
+    pub fn is_print_allowed(&self) -> bool {
+        let value = match self.options.get("print") {
+            Some(value) => value,
+            None => return true,
+        };
+
+        value == "yes"
+    }
+
+    pub fn is_copy_allowed(&self) -> bool {
+        let value = match self.options.get("copy") {
+            Some(value) => value,
+            None => return true,
+        };
+
+        value == "yes"
+    }
+
+    pub fn is_change_allowed(&self) -> bool {
+        let value = match self.options.get("change") {
+            Some(value) => value,
+            None => return true,
+        };
+
+        value == "yes"
+    }
+
+    pub fn is_add_notes_allowed(&self) -> bool {
+        let value = match self.options.get("addNotes") {
+            Some(value) => value,
+            None => return true,
+        };
+
+        value == "yes"
+    }
+    pub fn algorithm(&self) -> Option<&str> {
+        self.options.get("algorithm").map(|value| value.as_str())
+    }
+}
+
+/// Parses the fields from the pdfinfo response
+fn parse_pdf_info_encryption(output: &str) -> Result<PdfInfoEncryption, PdfInfoError> {
+    let (encrypted, options) = output
+        .split_once(' ')
+        .ok_or(PdfInfoError::MalformedEncryptionOptions)?;
+    let encrypted = parse_bool(encrypted);
+
+    // Strip the braces
+    let options = options
+        .strip_prefix('(')
+        .ok_or(PdfInfoError::MalformedEncryptionOptions)?;
+    let options = options
+        .strip_suffix(')')
+        .ok_or(PdfInfoError::MalformedEncryptionOptions)?;
+
+    let parts = options.split_whitespace();
+
+    let options = parts
+        .filter_map(|value| {
+            let (key, value) = value.split_once(':')?;
+            let value = value.trim_start();
+            Some((key.to_string(), value.to_string()))
+        })
+        .collect();
+
+    // yes (print:yes copy:no change:no addNotes:no algorithm:AES-256)
+
+    Ok(PdfInfoEncryption { encrypted, options })
+}
+
+#[derive(Debug)]
 pub struct PdfInfo {
     /// Data parsed from the pdfinfo cli
     data: HashMap<String, String>,
@@ -92,8 +175,13 @@ impl PdfInfo {
         self.data("Encrypted").map(|value| value.starts_with("yes"))
     }
 
-    pub fn encryption(&self) -> Option<&str> {
+    pub fn encryption_raw(&self) -> Option<&str> {
         self.data("Encrypted")
+    }
+
+    /// Obtains the encryption details from the file
+    pub fn encryption(&self) -> Option<Result<PdfInfoEncryption, PdfInfoError>> {
+        self.data("Encrypted").map(parse_pdf_info_encryption)
     }
 
     pub fn page_rot(&self) -> Option<&str> {
@@ -137,6 +225,9 @@ pub enum PdfInfoError {
 
     #[error("file is not a pdf")]
     NotPdfFile,
+
+    #[error("encryption options are malformed")]
+    MalformedEncryptionOptions,
 }
 
 #[derive(Debug, Default, Clone)]

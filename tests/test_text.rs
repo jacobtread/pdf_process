@@ -29,10 +29,10 @@ async fn test_single_page() {
 async fn test_all_pages() {
     let data = read("./tests/samples/test-pdf-2-pages.pdf").await.unwrap();
 
-    let info = pdf_info(&data, &PdfInfoArgs::default()).await.unwrap();
+    let _info = pdf_info(&data, &PdfInfoArgs::default()).await.unwrap();
 
     let expected = "Test pdf with text in it\n\n\nTest page 2\n\n\n";
-    let text = text_all_pages(&data, &info, &PdfTextArgs::default())
+    let text = text_all_pages(&data, &PdfTextArgs::default())
         .await
         .unwrap();
     assert_eq!(text.as_str(), expected);
@@ -60,14 +60,14 @@ async fn test_pages() {
 async fn test_all_pages_split() {
     let data = read("./tests/samples/test-pdf-2-pages.pdf").await.unwrap();
 
-    let info = pdf_info(&data, &PdfInfoArgs::default()).await.unwrap();
+    let _info = pdf_info(&data, &PdfInfoArgs::default()).await.unwrap();
 
     let expected = vec![
         "Test pdf with text in it\n\n".to_string(),
         "Test page 2\n\n".to_string(),
         "".to_string(),
     ];
-    let text = text_all_pages_split(&data, &info, &PdfTextArgs::default())
+    let text = text_all_pages_split(&data, &PdfTextArgs::default())
         .await
         .unwrap();
     assert_eq!(text, expected);
@@ -101,7 +101,7 @@ async fn test_encrypted() {
 
     let info = pdf_info(&data, &info_args).await.unwrap();
 
-    let err = text_all_pages(&data, &info, &PdfTextArgs::default())
+    let err = text_all_pages(&data, &PdfTextArgs::default())
         .await
         .unwrap_err();
     assert!(matches!(err, PdfTextError::PdfEncrypted));
@@ -111,7 +111,7 @@ async fn test_encrypted() {
         .unwrap_err();
     assert!(matches!(err, PdfTextError::PdfEncrypted));
 
-    let err = text_all_pages_split(&data, &info, &PdfTextArgs::default())
+    let err = text_all_pages_split(&data, &PdfTextArgs::default())
         .await
         .unwrap_err();
     assert!(matches!(err, PdfTextError::PdfEncrypted));
@@ -134,9 +134,9 @@ async fn test_encrypted_with_password() {
     let info = pdf_info(&data, &info_args).await.unwrap();
     let args = PdfTextArgs::default().set_password(Password::user("password"));
 
-    text_all_pages(&data, &info, &args).await.unwrap();
+    text_all_pages(&data, &args).await.unwrap();
     text_single_page(&data, &info, 1, &args).await.unwrap();
-    text_all_pages_split(&data, &info, &args).await.unwrap();
+    text_all_pages_split(&data, &args).await.unwrap();
     text_pages(&data, &info, vec![1, 2], &args).await.unwrap();
 }
 
@@ -152,13 +152,13 @@ async fn test_encrypted_with_incorrect_password() {
     let info = pdf_info(&data, &info_args).await.unwrap();
     let args = PdfTextArgs::default().set_password(Password::user("incorrect"));
 
-    let err = text_all_pages(&data, &info, &args).await.unwrap_err();
+    let err = text_all_pages(&data, &args).await.unwrap_err();
     assert!(matches!(err, PdfTextError::IncorrectPassword));
 
     let err = text_single_page(&data, &info, 1, &args).await.unwrap_err();
     assert!(matches!(err, PdfTextError::IncorrectPassword));
 
-    let err = text_all_pages_split(&data, &info, &args).await.unwrap_err();
+    let err = text_all_pages_split(&data, &args).await.unwrap_err();
     assert!(matches!(err, PdfTextError::IncorrectPassword));
 
     let err = text_pages(&data, &info, vec![1, 2], &args)

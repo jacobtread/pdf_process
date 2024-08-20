@@ -82,16 +82,7 @@ impl PdfTextArgs {
 /// * data - The raw PDF file bytes
 /// * info - The PDF info to use for the page count and encryption state
 /// * args - Optional args for the pdf to text
-pub async fn text_all_pages(
-    data: &[u8],
-    info: &PdfInfo,
-    args: &PdfTextArgs,
-) -> Result<String, PdfTextError> {
-    // Check encryption
-    if info.encrypted().unwrap_or_default() && args.password.is_none() {
-        return Err(PdfTextError::PdfEncrypted);
-    }
-
+pub async fn text_all_pages(data: &[u8], args: &PdfTextArgs) -> Result<String, PdfTextError> {
     let value = pages_text(data, args).await?;
 
     // Strip page end characters
@@ -113,14 +104,8 @@ pub async fn text_all_pages(
 /// * args - Optional args for the pdf to text
 pub async fn text_all_pages_split(
     data: &[u8],
-    info: &PdfInfo,
     args: &PdfTextArgs,
 ) -> Result<Vec<String>, PdfTextError> {
-    // Check encryption
-    if info.encrypted().unwrap_or_default() && args.password.is_none() {
-        return Err(PdfTextError::PdfEncrypted);
-    }
-
     let out = pages_text(data, args).await?;
 
     // Split on page ends
@@ -147,11 +132,6 @@ pub async fn text_pages(
     pages: Vec<u32>,
     args: &PdfTextArgs,
 ) -> Result<Vec<String>, PdfTextError> {
-    // Check encryption
-    if info.encrypted().unwrap_or_default() && args.password.is_none() {
-        return Err(PdfTextError::PdfEncrypted);
-    }
-
     // Get the page count
     let page_count = info
         .pages()
@@ -186,11 +166,6 @@ pub async fn text_single_page(
     page: u32,
     args: &PdfTextArgs,
 ) -> Result<String, PdfTextError> {
-    // Check encryption
-    if info.encrypted().unwrap_or_default() && args.password.is_none() {
-        return Err(PdfTextError::PdfEncrypted);
-    }
-
     // Get the page count
     let page_count = info
         .pages()

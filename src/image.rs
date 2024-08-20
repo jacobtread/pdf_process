@@ -392,11 +392,6 @@ pub async fn render_all_pages(
     format: OutputFormat,
     args: &RenderArgs,
 ) -> Result<Vec<DynamicImage>, PdfRenderError> {
-    // Check encryption
-    if info.encrypted().unwrap_or_default() && args.password.is_none() {
-        return Err(PdfRenderError::PdfEncrypted);
-    }
-
     // Get the page count
     let page_count = info
         .pages()
@@ -428,11 +423,6 @@ pub async fn render_pages(
     pages: Vec<u32>,
     args: &RenderArgs,
 ) -> Result<Vec<DynamicImage>, PdfRenderError> {
-    // Check encryption
-    if info.encrypted().unwrap_or_default() && args.password.is_none() {
-        return Err(PdfRenderError::PdfEncrypted);
-    }
-
     // Get the page count
     let page_count = info
         .pages()
@@ -469,11 +459,6 @@ pub async fn render_single_page(
     page: u32,
     args: &RenderArgs,
 ) -> Result<DynamicImage, PdfRenderError> {
-    // Check encryption
-    if info.encrypted().unwrap_or_default() && args.password.is_none() {
-        return Err(PdfRenderError::PdfEncrypted);
-    }
-
     // Get the page count
     let page_count = info
         .pages()
