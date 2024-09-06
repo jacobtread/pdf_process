@@ -9,6 +9,7 @@ use tokio::{io::AsyncWriteExt, process::Command};
 
 use crate::shared::Password;
 
+/// Pdf file may be "encrypted" but still readable
 #[derive(Debug)]
 pub struct PdfInfoEncryption {
     /// Whether encryption is enabled
