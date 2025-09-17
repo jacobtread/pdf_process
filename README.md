@@ -9,8 +9,6 @@ Provides functionality for:
 
 ## Prerequisites
 
-> Library developed against a Linux host. Windows is not supported
-
 Requires [Plopper](https://poppler.freedesktop.org/) be installed on your system and the utilities on your `PATH`. Lots 
 of distributions will come with this pre-installed. You can check if its installed by using `pdfinfo -v` which should 
 produce an output similar to:
