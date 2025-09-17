@@ -29,7 +29,7 @@ sudo dnf install poppler-utils
 
 Adjust the command above for your specific Linux distribution
 
-**MacOS**
+**MacOS**:
 
 ```sh
 brew install poppler
